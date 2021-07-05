@@ -1,0 +1,49 @@
+{
+	"private": true,
+	"name": "linked-abstract-syntax-tree",
+	"version": "0.0.1",
+	"description": "Creates and reads HTML abstract syntax trees.",
+	"keywords": [
+		"parser",
+		"DOM",
+		"HTML",
+		"AST"
+	],
+	"homepage": "https://github.com/JKC-Codes/linked-abstract-syntax-tree#readme",
+	"bugs": {
+		"url": "https://github.com/JKC-Codes/linked-abstract-syntax-tree/issues"
+	},
+	"license": "MPL-2.0",
+	"author": {
+		"name": "John Kemp-Cruz",
+		"url": "https://jkc.codes/"
+	},
+	"funding": [
+		"https://monzo.me/johnkempcruz",
+		"https://ko-fi.com/johnkempcruz"
+	],
+	"files": [
+		"index.js",
+		"components/**"
+	],
+	"main": "index.js",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/JKC-Codes/linked-abstract-syntax-tree.git"
+	},
+	"scripts": {
+		"ava": "ava",
+		"test": "ava",
+		"prepublishOnly": "npm run test"
+	},
+	"dependencies": {
+		"htmlparser2": "6.0.0"
+	},
+	"devDependencies": {
+		"ava": "^3.15.0"
+	},
+	"engines": {
+		"node": ">=12.0.0"
+	}
+}
