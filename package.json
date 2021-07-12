@@ -33,7 +33,7 @@
 		"url": "https://github.com/JKC-Codes/linked-abstract-syntax-tree.git"
 	},
 	"scripts": {
-		"ava": "ava",
+		"ava": "npx run ava",
 		"test": "ava",
 		"prepublishOnly": "npm run test"
 	},
