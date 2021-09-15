@@ -1,7 +1,7 @@
 import htmlparser2 from 'htmlparser2';
 
 import Document from './dom-specification/nodes/document.js';
-import symbolLAST from './symbol.js';
+import symbols from './symbols.js';
 
 export default function parse(HTMLString = '', options) {
 	console.log('parser called on ' + HTMLString);
@@ -35,14 +35,14 @@ export default function parse(HTMLString = '', options) {
 		console.log('open tag', {name});
 		// TODO handle foreign elements
 		const node = document.createElement(name);
-		node[symbolLAST].originalTag = name;
+		node[symbols.LAST].originalTag = name;
 		previousNode.appendChild(node);
 		previousNode = node;
 	}
 
 	function handleAttribute(name, value, quotes) {
 		console.log('attribute', {name}, {value}, {quotes});
-		const attributesMap = previousNode[symbolLAST].properties.attributes;
+		const attributesMap = previousNode[symbols.LAST].properties.attributes;
 		const lowerCaseName = name.toLowerCase();
 
 		if(!attributesMap.has(lowerCaseName)) {
@@ -60,7 +60,7 @@ export default function parse(HTMLString = '', options) {
 
 	function handleCloseTag(name, isImplied) {
 		console.log('close tag', {name}, {isImplied});
-		previousNode[symbolLAST].hasImpliedCloseTag = isImplied;
+		previousNode[symbols.LAST].hasImpliedCloseTag = isImplied;
 		previousNode = previousNode.parentNode;
 	}
 
