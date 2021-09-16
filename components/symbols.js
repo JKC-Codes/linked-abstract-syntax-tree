@@ -1,4 +1,10 @@
 export default {
-	LAST: Symbol('LAST'),
-	interfaces: Symbol('interfaces')
+	firstChild: Symbol('firstChild'),
+	interfaces: Symbol('interfaces'),
+	lastChild: Symbol('lastChild'),
+	length: Symbol('length'),
+	nextSibling: Symbol('nextSibling'),
+	nodeDocument: Symbol('nodeDocument'),
+	parent: Symbol('parent'),
+	previousSibling: Symbol('previousSibling'),
 }
