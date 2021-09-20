@@ -27,4 +27,17 @@ export default class Node {
 			return this.childNodes.size;
 		}
 	}
+	set [symbols.length](value) {}
+
+
+	// Properties
+	get baseURI() {
+		try {
+			return new URL(this[symbols.nodeDocument].querySelector('base').href).href;
+		}
+		catch {
+			return null;
+		}
+	}
+	set baseURI(value) {}
 }
