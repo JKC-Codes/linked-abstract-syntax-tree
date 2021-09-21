@@ -40,4 +40,18 @@ export default class Node {
 		}
 	}
 	set baseURI(value) {}
+
+	get childNodes() {
+		const treeWalker = this[symbols.nodeDocument].createTreeWalker(this);
+		const childNodes = new Set();
+		let currentNode = treeWalker.firstChild();
+
+		while(currentNode !== null) {
+			childNodes.add(currentNode);
+			currentNode = treeWalker.nextSibling();
+		}
+
+		return childNodes;
+	}
+	set childNodes(value) {}
 }
