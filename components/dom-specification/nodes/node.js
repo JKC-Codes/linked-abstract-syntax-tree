@@ -54,4 +54,9 @@ export default class Node {
 		return childNodes;
 	}
 	set childNodes(value) {}
+
+	get firstChild() {
+		return this[symbols.firstChild];
+	}
+	set firstChild(value) {}
 }
