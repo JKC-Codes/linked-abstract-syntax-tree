@@ -64,4 +64,9 @@ export default class Node {
 		return this.getRootNode().constructor[symbols.interfaces].has('Document');
 	}
 	set isConnected(value) {}
+
+	get lastChild() {
+		return this[symbols.lastChild];
+	}
+	set lastChild(value) {}
 }
