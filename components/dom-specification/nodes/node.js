@@ -27,7 +27,6 @@ export default class Node {
 			return this.childNodes.size;
 		}
 	}
-	set [symbols.length](value) {}
 
 
 	// Properties
@@ -69,4 +68,10 @@ export default class Node {
 		return this[symbols.lastChild];
 	}
 	set lastChild(value) {}
+
+	get nextSibling() {
+		return this[symbols.nextSibling];
+	}
+	set nextSibling(value) {}
+
 }
