@@ -74,4 +74,36 @@ export default class Node {
 	}
 	set nextSibling(value) {}
 
+	get nodeName() {
+		const interfaces = this.constructor[symbols.interfaces];
+
+		if(interfaces.has('Element')) {
+			return this.localName.toUpperCase();
+		}
+		else if(interfaces.has('Attr')) {
+			return this.localName;
+		}
+		else if(interfaces.has('Text') && !interfaces.has('CDATASection')) {
+			return '#text';
+		}
+		else if(interfaces.has('CDATASection')) {
+			return '#cdata-section';
+		}
+		else if(interfaces.has('ProcessingInstruction')) {
+			return this.target;
+		}
+		else if(interfaces.has('Comment')) {
+			return '#comment';
+		}
+		else if(interfaces.has('Document')) {
+			return '#document';
+		}
+		else if(interfaces.has('DocumentType')) {
+			return this.name;
+		}
+		else if(interfaces.has('DocumentFragment')) {
+			return '#document-fragment';
+		}
+	}
+	set nodeName(value) {}
 }
