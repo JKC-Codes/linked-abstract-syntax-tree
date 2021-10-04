@@ -151,4 +151,32 @@ export default class Node {
 		}
 	}
 	set nodeType(value) {}
+
+	get nodeValue() {
+		const interfaces = this.constructor[symbols.interfaces];
+
+		if(interfaces.has('Attr')) {
+			return this.value;
+		}
+		else if(interfaces.has('CharacterData')) {
+			return this.data;
+		}
+		else {
+			return null;
+		}
+	}
+	set nodeValue(value) {
+		const interfaces = this.constructor[symbols.interfaces];
+
+		if(value === null) {
+			value = '';
+		}
+
+		if(interfaces.has('Attr')) {
+			this.value = value;
+		}
+		else if(interfaces.has('CharacterData')) {
+			this.replaceData(0, this[symbols.length], value);
+		}
+	}
 }
