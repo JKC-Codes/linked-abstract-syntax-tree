@@ -179,4 +179,14 @@ export default class Node {
 			this.replaceData(0, this[symbols.length], value);
 		}
 	}
+
+	get ownerDocument() {
+		if(this.constructor[symbols.interfaces].has('Document')) {
+			return null;
+		}
+		else {
+			return this[symbols.nodeDocument];
+		}
+	}
+	set ownerDocument(value) {}
 }
