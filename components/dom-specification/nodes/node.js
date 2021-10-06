@@ -189,4 +189,14 @@ export default class Node {
 		}
 	}
 	set ownerDocument(value) {}
+
+	get parentElement() {
+		if(this[symbols.parent].constructor[symbols.interfaces].has('Element')) {
+			return this[symbols.parent];
+		}
+		else {
+			return null;
+		}
+	}
+	set parentElement(value) {}
 }
