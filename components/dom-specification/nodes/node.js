@@ -199,4 +199,9 @@ export default class Node {
 		}
 	}
 	set parentElement(value) {}
+
+	get parentNode() {
+		return this[symbols.parent];
+	}
+	set parentNode(value) {}
 }
