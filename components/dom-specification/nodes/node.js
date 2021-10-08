@@ -204,4 +204,9 @@ export default class Node {
 		return this[symbols.parent];
 	}
 	set parentNode(value) {}
+
+	get previousSibling() {
+		return this[symbols.previousSibling];
+	}
+	set previousSibling(value) {}
 }
