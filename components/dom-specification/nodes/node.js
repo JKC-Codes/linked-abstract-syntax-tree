@@ -1,5 +1,6 @@
 // https://dom.spec.whatwg.org/#interface-node
 
+import nodeFilter from '../traversal/node-filter.js';
 import symbols from '../../symbols.js';
 
 const nodeTypes = {
@@ -209,4 +210,50 @@ export default class Node {
 		return this[symbols.previousSibling];
 	}
 	set previousSibling(value) {}
+
+	get textContent() {
+		const interfaces = this.constructor[symbols.interfaces];
+
+		if(interfaces.has('DocumentFragment') || interfaces.has('Element')) {
+			const treeWalker = this[symbols.nodeDocument].createTreeWalker(this, nodeFilter.SHOW_TEXT);
+			let textContent = '';
+			let currentNode = treeWalker.nextNode();
+
+			while(currentNode !== null) {
+				textContent += currentNode.data;
+				currentNode = treeWalker.nextNode();
+			}
+
+			return textContent;
+		}
+		else if(interfaces.has('Attr')) {
+			return this.data;
+		}
+		else {
+			return null;
+		}
+	}
+	set textContent(value) {
+		const interfaces = this.constructor[symbols.interfaces];
+
+		if(value === null) {
+			value = '';
+		}
+
+		if(interfaces.has('DocumentFragment') || interfaces.has('Element')) {
+			let node = null;
+
+			if(value !== '') {
+				node = this[symbols.nodeDocument].createTextNode(value);
+			}
+
+			replaceAll(node, this[symbols.parent]);
+		}
+		else if(interfaces.has('Attr')) {
+			this.value = value;
+		}
+		else if(interfaces.has('CharacterData')) {
+			this.replaceData(0, this[symbols.length], value);
+		}
+	}
 }
