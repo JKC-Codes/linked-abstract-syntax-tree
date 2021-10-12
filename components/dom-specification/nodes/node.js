@@ -1,6 +1,7 @@
 // https://dom.spec.whatwg.org/#interface-node
 
 import nodeFilter from '../traversal/node-filter.js';
+import preInsert from '../mutation-algorithms/pre-insert.js';
 import symbols from '../../symbols.js';
 
 const nodeTypes = {
@@ -256,4 +257,13 @@ export default class Node {
 			this.replaceData(0, this[symbols.length], value);
 		}
 	}
+
+
+	// Methods
+	get appendChild() {
+		return function(node) {
+			return preInsert(node, this, null);
+		};
+	}
+	set appendChild(value) {}
 }
