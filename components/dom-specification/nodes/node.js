@@ -266,4 +266,101 @@ export default class Node {
 		};
 	}
 	set appendChild(value) {}
+
+	get cloneNode() {
+		return function(cloneChildren) {
+			let document = this[symbols.nodeDocument];
+
+			async function clone(node) {
+				let copy;
+
+				if(node.constructor[symbols.interfaces].has('Element')) {
+					copy = document.createElement(node.localName);
+
+					node[symbols.attributes].forEach((value, key) => {
+						copy[symbols.attributes].set(key, value.cloneNode());
+					})
+				}
+				else {
+					if(node.constructor[symbols.interfaces].has('Document')) {
+						const Document = await import('./document.js');
+						copy = new Document();
+						copy[symbols.encoding] = node[symbols.encoding];
+						copy[symbols.contentType] = node[symbols.contentType];
+						copy[symbols.URL] = node[symbols.URL];
+						copy[symbols.origin] = node[symbols.origin];
+						copy[symbols.type] = node[symbols.type];
+						copy[symbols.mode] = node[symbols.mode];
+					}
+					else if(node.constructor[symbols.interfaces].has('DocumentType')) {
+						const DocumentType = await import('./document-type.js');
+						copy = new DocumentType();
+						copy[symbols.name] = node[symbols.name];
+						copy[symbols.publicID] = node[symbols.publicID];
+						copy[symbols.systemID] = node[symbols.systemID];
+					}
+					else if(node.constructor[symbols.interfaces].has('Attr')) {
+						copy = document.createAttribute();
+						copy[symbols.localName] = node[symbols.localName];
+						copy.value = node.vlaue;
+						copy[symbols.quotes] = node[symbols.quotes];
+					}
+					else if(node.constructor[symbols.interfaces].has('Text')) {
+						copy = document.createTextNode(node.data);
+					}
+					else if(node.constructor[symbols.interfaces].has('Comment')) {
+						copy = document.createComment(node.data);
+					}
+					else if(node.constructor[symbols.interfaces].has('ProcessingInstruction')) {
+						copy = document.createProcessingInstruction(node.target, node.data);
+					}
+				}
+
+				if(copy.nodeType === nodeTypes.DOCUMENT_NODE) {
+					copy[symbols.nodeDocument] = copy;
+					document = copy;
+				}
+				else {
+					copy[symbols.nodeDocument] = document;
+				}
+
+				return copy;
+			}
+
+			const rootCopy = clone(this);
+
+			if(cloneChildren === true) {
+				const treeWalker = this[symbols.nodeDocument].createTreeWalker(this);
+				let currentNode = treeWalker.firstChild();
+				let cloneParent = rootCopy;
+
+				while(currentNode !== null) {
+					cloneParent.appendChild(clone(currentNode));
+
+					let lastNode = currentNode;
+					currentNode = treeWalker.nextNode();
+
+					if(currentNode === null) {
+						break;
+					}
+					else if(lastNode[symbols.nextSibling] === currentNode) {
+						continue;
+					}
+					else if(lastNode[symbols.firstChild] === currentNode) {
+						cloneParent = cloneParent[symbols.lastChild];
+					}
+					else {
+						do {
+							cloneParent = cloneParent[symbols.parent];
+							lastNode = lastNode[symbols.parent];
+						}
+						while(lastNode[symbols.nextSibling] !== currentNode);
+					}
+				}
+			}
+
+			return rootCopy;
+		}
+	}
+	set cloneNode(value) {}
 }
