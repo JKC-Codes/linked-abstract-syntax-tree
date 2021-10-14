@@ -363,4 +363,73 @@ export default class Node {
 		}
 	}
 	set cloneNode(value) {}
+
+	get compareDocumentPosition() {
+		const DOCUMENT_POSITION_DISCONNECTED = 1;
+		const DOCUMENT_POSITION_PRECEDING = 2;
+		const DOCUMENT_POSITION_FOLLOWING = 4;
+		const DOCUMENT_POSITION_CONTAINS = 8;
+		const DOCUMENT_POSITION_CONTAINED_BY = 16;
+		const DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 32;
+
+		return function(other) {
+			if(this === other) {
+				return 0;
+			}
+
+			let node1 = other;
+			let node2 = this;
+			let attr1 = null;
+			let attr2 = null;
+
+			if(node1.constructor[symbols.interfaces].has('Attr')) {
+				attr1 = node1;
+				node1 = attr1.ownerElement;
+			}
+
+			if(node2.constructor[symbols.interfaces].has('Attr')) {
+				attr2 = node2;
+				node2 = attr2.ownerElement;
+
+				if(attr1 !== null && node1 !== null && node2 === node1) {
+					node2[symbols.attributes].forEach(attr => {
+						if(attr.isEqualNode(attr1)) {
+							return DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DOCUMENT_POSITION_PRECEDING;
+						}
+						else if(attr.isEqualNode(attr2)) {
+							return DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DOCUMENT_POSITION_FOLLOWING;
+						}
+					});
+				}
+			}
+
+			if(node1 === null || node2 === null || node1.getRootNode() !== node2.getRootNode()) {
+				return DOCUMENT_POSITION_DISCONNECTED + DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DOCUMENT_POSITION_FOLLOWING;
+			}
+
+			if((node1.contains(node2) && attr1 !== null) || (node1 === node2 && attr2 !== null)) {
+				return DOCUMENT_POSITION_CONTAINS + DOCUMENT_POSITION_PRECEDING;
+			}
+
+			if((node2.contains(node1) && attr2 !== null) || (node1 === node2 && attr1 !== null)) {
+				return DOCUMENT_POSITION_CONTAINED_BY + DOCUMENT_POSITION_FOLLOWING;
+			}
+
+			const treeWalker = node1[symbols.nodeDocument].createTreeWalker(node1[symbols.nodeDocument]);
+			treeWalker.currentNode = node1;
+			let currentNode = treeWalker.nextNode();
+
+			while(currentNode !== null) {
+				if(currentNode === node2) {
+					return DOCUMENT_POSITION_PRECEDING;
+				}
+				else {
+					currentNode = treeWalker.nextNode();
+				}
+			}
+
+			return DOCUMENT_POSITION_FOLLOWING;
+		}
+	}
+	set compareDocumentPosition(value) {}
 }
