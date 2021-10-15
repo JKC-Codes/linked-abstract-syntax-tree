@@ -432,4 +432,29 @@ export default class Node {
 		}
 	}
 	set compareDocumentPosition(value) {}
+
+	get contains() {
+		return function(other) {
+			if(this === other) {
+				return true;
+			}
+			else if(other === null) {
+				return false;
+			}
+			else {
+				const treeWalker = this[symbols.nodeDocument].createTreeWalker(this);
+				let currentNode = treeWalker.firstChild();
+
+				while(currentNode !== null) {
+					if(currentNode === other) {
+						return true;
+					}
+					currentNode = treeWalker.nextNode();
+				}
+
+				return false;
+			}
+		};
+	}
+	set contains(value) {}
 }
