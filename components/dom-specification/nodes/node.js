@@ -457,4 +457,15 @@ export default class Node {
 		};
 	}
 	set contains(value) {}
+
+	get getRootNode() {
+		let rootNode = this;
+
+		while(rootNode[symbols.parent]) {
+			rootNode = rootNode[symbols.parent];
+		}
+
+		return rootNode;
+	}
+	set getRootNode(value) {}
 }
