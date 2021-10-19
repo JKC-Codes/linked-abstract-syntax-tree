@@ -468,4 +468,9 @@ export default class Node {
 		return rootNode;
 	}
 	set getRootNode(value) {}
+
+	get hasChildNodes() {
+		return this.firstChild ? true : false;
+	}
+	set hasChildNodes(value) {}
 }
