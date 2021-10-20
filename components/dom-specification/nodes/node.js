@@ -473,4 +473,11 @@ export default class Node {
 		return this.firstChild ? true : false;
 	}
 	set hasChildNodes(value) {}
+
+	get insertBefore() {
+		return function(node, child) {
+			return preInsert(node, this, child);
+		};
+	}
+	set insertBefore(value) {}
 }
