@@ -480,4 +480,95 @@ export default class Node {
 		};
 	}
 	set insertBefore(value) {}
+
+	get isEqualNode() {
+		return function(otherNode) {
+			function compareNodes(nodeA, nodeB) {
+				const interfaces = nodeA.constructor[symbols.interfaces];
+
+				function compareProperties(properties) {
+					for(const property of properties) {
+						if(nodeA[property] !== nodeB[property]) {
+							return false;
+						}
+					}
+				}
+
+				for(const currentInterface of interfaces) {
+					if(!nodeB.constructor[symbols.interfaces].has(currentInterface)) {
+						return false;
+					}
+				}
+
+				if(interfaces.has('DocumentType') && compareProperties([
+					'name',
+					'publicId',
+					'systemId'
+				]) === false) {
+					return false;
+				}
+				else if(interfaces.has('Element')) {
+					if(compareProperties([
+					symbols.namespace,
+					symbols.namespacePrefix,
+					'localName',
+					[symbols.attributes].size
+					]) === false) {
+						return false;
+					}
+
+					for(const [attributeName, attributeNode] of nodeA[symbols.attributes]) {
+						if(!attributeNode.isEqualNode(nodeB[symbols.attributes][attributeName])) {
+							return false;
+						}
+					}
+				}
+				else if(interfaces.has('Attr') && compareProperties([
+					symbols.namespace,
+					'localName',
+					'value'
+				]) === false) {
+					return false;
+				}
+				else if(interfaces.has('ProcessingInstruction') && compareProperties([
+					'target',
+					'data'
+				]) === false) {
+					return false;
+				}
+				else if((interfaces.has('Text') || interfaces.has('Comment')) && compareProperties([
+					'data'
+				]) === false) {
+					return false;
+				}
+			}
+
+			if(compareNodes(this, otherNode) === false) {
+				return false;
+			}
+
+			const treeWalkerA = this[symbols.nodeDocument].createTreeWalker(this);
+			const treeWalkerB = this[symbols.nodeDocument].createTreeWalker(this);
+			let currentNodeA = treeWalkerA.firstChild();
+			let currentNodeB = treeWalkerB.firstChild();
+
+			while(currentNodeA !== null && currentNodeB !== null) {
+				if(compareNodes(currentNodeA, currentNodeB) === false) {
+					return false;
+				}
+				else {
+					currentNodeA = treeWalkerA.nextNode();
+					currentNodeB = treeWalkerB.nextNode();
+				}
+			}
+
+			if(currentNodeA !== null || currentNodeB !== null) {
+				return false;
+			}
+			else {
+				return true;
+			}
+		}
+	}
+	set isEqualNode(value) {}
 }
