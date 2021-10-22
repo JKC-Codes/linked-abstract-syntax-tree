@@ -571,4 +571,11 @@ export default class Node {
 		}
 	}
 	set isEqualNode(value) {}
+
+	get isSameNode() {
+		return function(otherNode) {
+			return this === otherNode;
+		}
+	}
+	set isSameNode(value) {}
 }
