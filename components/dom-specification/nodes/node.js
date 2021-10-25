@@ -578,4 +578,42 @@ export default class Node {
 		}
 	}
 	set isSameNode(value) {}
+
+	get normalize() {
+		function exclusiveTextNodeFilter(node) {
+			if(node.constructor[symbols.interfaces].has('CDATASection')) {
+				return nodeFilter.FILTER_SKIP;
+			}
+			else {
+				return nodeFilter.FILTER_ACCEPT;
+			}
+		}
+
+		const treeWalker = this[symbols.nodeDocument].createTreeWalker(this, nodeFilter.SHOW_TEXT, {acceptNode: exclusiveTextNodeFilter});
+		let node = treeWalker.nextNode();
+
+		while(node !== null) {
+			let length = node.data.length;
+
+			if(length === 0) {
+				remove(node);
+				node = treeWalker.nextNode();
+				continue;
+			}
+
+			const textWalker = this[symbols.nodeDocument].createTreeWalker(node, nodeFilter.SHOW_TEXT, {acceptNode: exclusiveTextNodeFilter});
+			let currentTextNode = textWalker.nextSibling();
+			let data = '';
+
+			while(currentTextNode !== null) {
+				data += currentTextNode.data;
+				remove(currentTextNode);
+				currentTextNode = textWalker.nextSibling();
+			}
+
+			node.replaceData(length, 0, data);
+			node = treeWalker.nextNode();
+		}
+	}
+	set normalize(value) {}
 }
