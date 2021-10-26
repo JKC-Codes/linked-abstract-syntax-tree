@@ -616,4 +616,11 @@ export default class Node {
 		}
 	}
 	set normalize(value) {}
+
+	get removeChild() {
+		return function(child) {
+			return preRemove(child, this);
+		};
+	}
+	set removeChild(value) {}
 }
