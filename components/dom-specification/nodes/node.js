@@ -623,4 +623,11 @@ export default class Node {
 		};
 	}
 	set removeChild(value) {}
+
+	get replaceChild() {
+		return function(node, child) {
+			return replace(child, node, this);
+		};
+	}
+	set replaceChild(value) {}
 }
