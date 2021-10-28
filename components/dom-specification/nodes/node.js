@@ -1,377 +1,94 @@
 // https://dom.spec.whatwg.org/#interface-node
 
-import nodeFilter from '../traversal/node-filter.js';
-import preInsert from '../mutation-algorithms/pre-insert.js';
+import { setAnExistingAttributeValue } from '../algorithms/attribute.js';
+import { replaceData } from '../algorithms/character-data.js';
+import { getDocumentBaseURL } from '../../html-specification/algorithms/document.js';
+import { getHTMLUppercasedQualifiedName, getQualifiedName, locateNamespacePrefix } from '../algorithms/element.js';
+import { append, preInsert, preRemove, remove, replace } from '../algorithms/mutation.js';
+import { clone, getEquality, getLength, locateNamespace } from '../algorithms/node.js';
+import { getDescendantTextContent, walkContiguousExclusiveTextNodes } from '../algorithms/text.js';
+import { getParentElement, getRoot, isAncestor, isDescendant,	isInclusiveDescendant, isPreceding, walkChildren, walkDescendants } from '../algorithms/tree.js';
+
+import errors from '../../errors.js';
 import symbols from '../../symbols.js';
 
-const nodeTypes = {
-	ELEMENT_NODE: 1,
-	ATTRIBUTE_NODE: 2,
-	TEXT_NODE: 3,
-	CDATA_SECTION_NODE: 4,
-	PROCESSING_INSTRUCTION_NODE: 7,
-	COMMENT_NODE: 8,
-	DOCUMENT_NODE: 9,
-	DOCUMENT_TYPE_NODE: 10,
-	DOCUMENT_FRAGMENT_NODE: 11
-}
 
 export default class Node {
-	constructor(nodeDocument) {
-		this[symbols.firstChild] = null;
-		this[symbols.lastChild] = null;
-		this[symbols.nextSibling] = null;
-		this[symbols.nodeDocument] = nodeDocument;
-		this[symbols.parent] = null;
-		this[symbols.previousSibling] = null;
-	}
-
-	static [symbols.interfaces] = new Set(['Node']);
-
-	get [symbols.length]() {
-		const interfaces = this.constructor[symbols.interfaces];
-
-		if(interfaces.has('DocumentType') || interfaces.has('Attr')) {
-			return 0;
-		}
-		else if(interfaces.has('CharacterData')) {
-			return this.data.length;
-		}
-		else {
-			return this.childNodes.size;
-		}
+	constructor() {
+		Object.defineProperties(this, {
+			[symbols.firstChild]: {writable: true, value: null},
+			[symbols.lastChild]: {writable: true, value: null},
+			[symbols.nextSibling]: {writable: true, value: null},
+			[symbols.nodeDocument]: {writable: true, value: undefined},
+			[symbols.parent]: {writable: true, value: null},
+			[symbols.previousSibling]: {writable: true, value: null}
+		});
 	}
 
 
-	// Properties
+	static get ELEMENT_NODE() { return 1; }
+	static get ATTRIBUTE_NODE() { return 2; }
+	static get TEXT_NODE() { return 3; }
+	static get CDATA_SECTION_NODE() { return 4; }
+	static get PROCESSING_INSTRUCTION_NODE() { return 7; }
+	static get COMMENT_NODE() { return 8; }
+	static get DOCUMENT_NODE() { return 9; }
+	static get DOCUMENT_TYPE_NODE() { return 10; }
+	static get DOCUMENT_FRAGMENT_NODE() { return 11; }
+
+	static get DOCUMENT_POSITION_DISCONNECTED() { return 1; }
+	static get DOCUMENT_POSITION_PRECEDING() { return 2; }
+	static get DOCUMENT_POSITION_FOLLOWING() { return 4; }
+	static get DOCUMENT_POSITION_CONTAINS() { return 8; }
+	static get DOCUMENT_POSITION_CONTAINED_BY() { return 16; }
+	static get DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC() { return 32; }
+
+
+	static #interfaces = new Set(['EventTarget', 'Node']);
+	get [symbols.interfaces]() {
+		return this.constructor.#interfaces;
+	}
+
+
+	get appendChild() {
+		return function(node) {
+			return append(node, this);
+		};
+	}
+	set appendChild(value) {
+		return errors.readOnly('appendChild', value);
+	}
+
 	get baseURI() {
-		try {
-			return new URL(this[symbols.nodeDocument].querySelector('base').href).href;
-		}
-		catch {
-			return null;
-		}
+		return getDocumentBaseURL(this[symbols.nodeDocument]).href;
 	}
-	set baseURI(value) {}
+	set baseURI(value) {
+		return errors.readOnly('baseURI', value);
+	}
 
 	get childNodes() {
-		const treeWalker = this[symbols.nodeDocument].createTreeWalker(this);
-		const childNodes = new Set();
-		let currentNode = treeWalker.firstChild();
+		const childNodes = [];
 
-		while(currentNode !== null) {
-			childNodes.add(currentNode);
-			currentNode = treeWalker.nextSibling();
+		for(const child of walkChildren(this)) {
+			childNodes.push(child);
 		}
 
 		return childNodes;
 	}
-	set childNodes(value) {}
-
-	get firstChild() {
-		return this[symbols.firstChild];
+	set childNodes(value) {
+		return errors.readOnly('childNodes', value);
 	}
-	set firstChild(value) {}
-
-	get isConnected() {
-		return this.getRootNode().constructor[symbols.interfaces].has('Document');
-	}
-	set isConnected(value) {}
-
-	get lastChild() {
-		return this[symbols.lastChild];
-	}
-	set lastChild(value) {}
-
-	get nextSibling() {
-		return this[symbols.nextSibling];
-	}
-	set nextSibling(value) {}
-
-	get nodeName() {
-		const interfaces = this.constructor[symbols.interfaces];
-
-		if(interfaces.has('Element')) {
-			return this.localName.toUpperCase();
-		}
-		else if(interfaces.has('Attr')) {
-			return this.localName;
-		}
-		else if(interfaces.has('Text') && !interfaces.has('CDATASection')) {
-			return '#text';
-		}
-		else if(interfaces.has('CDATASection')) {
-			return '#cdata-section';
-		}
-		else if(interfaces.has('ProcessingInstruction')) {
-			return this.target;
-		}
-		else if(interfaces.has('Comment')) {
-			return '#comment';
-		}
-		else if(interfaces.has('Document')) {
-			return '#document';
-		}
-		else if(interfaces.has('DocumentType')) {
-			return this.name;
-		}
-		else if(interfaces.has('DocumentFragment')) {
-			return '#document-fragment';
-		}
-	}
-	set nodeName(value) {}
-
-	get nodeType() {
-		const interfaces = this.constructor[symbols.interfaces];
-
-		if(interfaces.has('Element')) {
-			return nodeTypes.ELEMENT_NODE;
-		}
-		else if(interfaces.has('Attr')) {
-			return nodeTypes.ATTRIBUTE_NODE;
-		}
-		else if(interfaces.has('Text') && !interfaces.has('CDATASection')) {
-			return nodeTypes.TEXT_NODE;
-		}
-		else if(interfaces.has('CDATASection')) {
-			return nodeTypes.CDATASection;
-		}
-		else if(interfaces.has('ProcessingInstruction')) {
-			return nodeTypes.PROCESSING_INSTRUCTION_NODE;
-		}
-		else if(interfaces.has('Comment')) {
-			return nodeTypes.COMMENT_NODE;
-		}
-		else if(interfaces.has('Document')) {
-			return nodeTypes.DOCUMENT_NODE;
-		}
-		else if(interfaces.has('DocumentType')) {
-			return nodeTypes.DOCUMENT_TYPE_NODE;
-		}
-		else if(interfaces.has('DocumentFragment')) {
-			return nodeTypes.DOCUMENT_FRAGMENT_NODE;
-		}
-	}
-	set nodeType(value) {}
-
-	get nodeValue() {
-		const interfaces = this.constructor[symbols.interfaces];
-
-		if(interfaces.has('Attr')) {
-			return this.value;
-		}
-		else if(interfaces.has('CharacterData')) {
-			return this.data;
-		}
-		else {
-			return null;
-		}
-	}
-	set nodeValue(value) {
-		const interfaces = this.constructor[symbols.interfaces];
-
-		if(value === null) {
-			value = '';
-		}
-
-		if(interfaces.has('Attr')) {
-			this.value = value;
-		}
-		else if(interfaces.has('CharacterData')) {
-			this.replaceData(0, this[symbols.length], value);
-		}
-	}
-
-	get ownerDocument() {
-		if(this.constructor[symbols.interfaces].has('Document')) {
-			return null;
-		}
-		else {
-			return this[symbols.nodeDocument];
-		}
-	}
-	set ownerDocument(value) {}
-
-	get parentElement() {
-		if(this[symbols.parent].constructor[symbols.interfaces].has('Element')) {
-			return this[symbols.parent];
-		}
-		else {
-			return null;
-		}
-	}
-	set parentElement(value) {}
-
-	get parentNode() {
-		return this[symbols.parent];
-	}
-	set parentNode(value) {}
-
-	get previousSibling() {
-		return this[symbols.previousSibling];
-	}
-	set previousSibling(value) {}
-
-	get textContent() {
-		const interfaces = this.constructor[symbols.interfaces];
-
-		if(interfaces.has('DocumentFragment') || interfaces.has('Element')) {
-			const treeWalker = this[symbols.nodeDocument].createTreeWalker(this, nodeFilter.SHOW_TEXT);
-			let textContent = '';
-			let currentNode = treeWalker.nextNode();
-
-			while(currentNode !== null) {
-				textContent += currentNode.data;
-				currentNode = treeWalker.nextNode();
-			}
-
-			return textContent;
-		}
-		else if(interfaces.has('Attr')) {
-			return this.data;
-		}
-		else {
-			return null;
-		}
-	}
-	set textContent(value) {
-		const interfaces = this.constructor[symbols.interfaces];
-
-		if(value === null) {
-			value = '';
-		}
-
-		if(interfaces.has('DocumentFragment') || interfaces.has('Element')) {
-			let node = null;
-
-			if(value !== '') {
-				node = this[symbols.nodeDocument].createTextNode(value);
-			}
-
-			replaceAll(node, this[symbols.parent]);
-		}
-		else if(interfaces.has('Attr')) {
-			this.value = value;
-		}
-		else if(interfaces.has('CharacterData')) {
-			this.replaceData(0, this[symbols.length], value);
-		}
-	}
-
-
-	// Methods
-	get appendChild() {
-		return function(node) {
-			return preInsert(node, this, null);
-		};
-	}
-	set appendChild(value) {}
 
 	get cloneNode() {
-		return function(cloneChildren) {
-			let document = this[symbols.nodeDocument];
-
-			async function clone(node) {
-				let copy;
-
-				if(node.constructor[symbols.interfaces].has('Element')) {
-					copy = document.createElement(node.localName);
-
-					node[symbols.attributes].forEach((value, key) => {
-						copy[symbols.attributes].set(key, value.cloneNode());
-					})
-				}
-				else {
-					if(node.constructor[symbols.interfaces].has('Document')) {
-						const Document = await import('./document.js');
-						copy = new Document();
-						copy[symbols.encoding] = node[symbols.encoding];
-						copy[symbols.contentType] = node[symbols.contentType];
-						copy[symbols.URL] = node[symbols.URL];
-						copy[symbols.origin] = node[symbols.origin];
-						copy[symbols.type] = node[symbols.type];
-						copy[symbols.mode] = node[symbols.mode];
-					}
-					else if(node.constructor[symbols.interfaces].has('DocumentType')) {
-						const DocumentType = await import('./document-type.js');
-						copy = new DocumentType();
-						copy[symbols.name] = node[symbols.name];
-						copy[symbols.publicID] = node[symbols.publicID];
-						copy[symbols.systemID] = node[symbols.systemID];
-					}
-					else if(node.constructor[symbols.interfaces].has('Attr')) {
-						copy = document.createAttribute();
-						copy[symbols.localName] = node[symbols.localName];
-						copy.value = node.vlaue;
-						copy[symbols.quotes] = node[symbols.quotes];
-					}
-					else if(node.constructor[symbols.interfaces].has('Text')) {
-						copy = document.createTextNode(node.data);
-					}
-					else if(node.constructor[symbols.interfaces].has('Comment')) {
-						copy = document.createComment(node.data);
-					}
-					else if(node.constructor[symbols.interfaces].has('ProcessingInstruction')) {
-						copy = document.createProcessingInstruction(node.target, node.data);
-					}
-				}
-
-				if(copy.nodeType === nodeTypes.DOCUMENT_NODE) {
-					copy[symbols.nodeDocument] = copy;
-					document = copy;
-				}
-				else {
-					copy[symbols.nodeDocument] = document;
-				}
-
-				return copy;
-			}
-
-			const rootCopy = clone(this);
-
-			if(cloneChildren === true) {
-				const treeWalker = this[symbols.nodeDocument].createTreeWalker(this);
-				let currentNode = treeWalker.firstChild();
-				let cloneParent = rootCopy;
-
-				while(currentNode !== null) {
-					cloneParent.appendChild(clone(currentNode));
-
-					let lastNode = currentNode;
-					currentNode = treeWalker.nextNode();
-
-					if(currentNode === null) {
-						break;
-					}
-					else if(lastNode[symbols.nextSibling] === currentNode) {
-						continue;
-					}
-					else if(lastNode[symbols.firstChild] === currentNode) {
-						cloneParent = cloneParent[symbols.lastChild];
-					}
-					else {
-						do {
-							cloneParent = cloneParent[symbols.parent];
-							lastNode = lastNode[symbols.parent];
-						}
-						while(lastNode[symbols.nextSibling] !== currentNode);
-					}
-				}
-			}
-
-			return rootCopy;
-		}
+		return function(deep = false) {
+			return clone(this, deep);
+		};
 	}
-	set cloneNode(value) {}
+	set cloneNode(value) {
+		return errors.readOnly('cloneNode', value);
+	}
 
 	get compareDocumentPosition() {
-		const DOCUMENT_POSITION_DISCONNECTED = 1;
-		const DOCUMENT_POSITION_PRECEDING = 2;
-		const DOCUMENT_POSITION_FOLLOWING = 4;
-		const DOCUMENT_POSITION_CONTAINS = 8;
-		const DOCUMENT_POSITION_CONTAINED_BY = 16;
-		const DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 32;
-
 		return function(other) {
 			if(this === other) {
 				return 0;
@@ -382,252 +99,443 @@ export default class Node {
 			let attr1 = null;
 			let attr2 = null;
 
-			if(node1.constructor[symbols.interfaces].has('Attr')) {
+			if(node1[symbols.interfaces].has('Attr')) {
 				attr1 = node1;
-				node1 = attr1.ownerElement;
+				node1 = attr1[symbols.element];
 			}
 
-			if(node2.constructor[symbols.interfaces].has('Attr')) {
+			if(node2[symbols.interfaces].has('Attr')) {
 				attr2 = node2;
-				node2 = attr2.ownerElement;
+				node2 = attr2[symbols.element];
 
 				if(attr1 !== null && node1 !== null && node2 === node1) {
-					node2[symbols.attributes].forEach(attr => {
-						if(attr.isEqualNode(attr1)) {
-							return DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DOCUMENT_POSITION_PRECEDING;
+					for(const attr of node2[symbols.attributes].values()) {
+						if(getEquality(attr, attr1) === true) {
+							return this.constructor.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + this.constructor.DOCUMENT_POSITION_PRECEDING;
 						}
-						else if(attr.isEqualNode(attr2)) {
-							return DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DOCUMENT_POSITION_FOLLOWING;
+						else if(getEquality(attr, attr2) === true) {
+							return this.constructor.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + this.constructor.DOCUMENT_POSITION_FOLLOWING;
 						}
-					});
+					}
 				}
 			}
 
-			if(node1 === null || node2 === null || node1.getRootNode() !== node2.getRootNode()) {
-				return DOCUMENT_POSITION_DISCONNECTED + DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + DOCUMENT_POSITION_FOLLOWING;
+			if(node1 === null || node2 === null || (getRoot(node1) !== getRoot(node2))) {
+				return this.constructor.DOCUMENT_POSITION_DISCONNECTED + this.constructor.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + this.constructor.DOCUMENT_POSITION_FOLLOWING;
 			}
 
-			if((node1.contains(node2) && attr1 !== null) || (node1 === node2 && attr2 !== null)) {
-				return DOCUMENT_POSITION_CONTAINS + DOCUMENT_POSITION_PRECEDING;
+			if((isAncestor(node1, node2) && attr1 === null) || ((node1 === node2) && attr2 !== null)) {
+				return this.constructor.DOCUMENT_POSITION_CONTAINS + this.constructor.DOCUMENT_POSITION_PRECEDING;
 			}
 
-			if((node2.contains(node1) && attr2 !== null) || (node1 === node2 && attr1 !== null)) {
-				return DOCUMENT_POSITION_CONTAINED_BY + DOCUMENT_POSITION_FOLLOWING;
+			if((isDescendant(node1, node2) && attr2 === null) || ((node1 === node2) && attr1 !== null)) {
+				return this.constructor.DOCUMENT_POSITION_CONTAINED_BY + this.constructor.DOCUMENT_POSITION_FOLLOWING;
 			}
 
-			const treeWalker = node1[symbols.nodeDocument].createTreeWalker(node1[symbols.nodeDocument]);
-			treeWalker.currentNode = node1;
-			let currentNode = treeWalker.nextNode();
-
-			while(currentNode !== null) {
-				if(currentNode === node2) {
-					return DOCUMENT_POSITION_PRECEDING;
-				}
-				else {
-					currentNode = treeWalker.nextNode();
-				}
+			if(isPreceding(node1, node2)) {
+				return this.constructor.DOCUMENT_POSITION_PRECEDING;
 			}
 
-			return DOCUMENT_POSITION_FOLLOWING;
-		}
+			return this.constructor.DOCUMENT_POSITION_FOLLOWING;
+		};
 	}
-	set compareDocumentPosition(value) {}
+	set compareDocumentPosition(value) {
+		return errors.readOnly('compareDocumentPosition', value);
+	}
 
 	get contains() {
 		return function(other) {
-			if(this === other) {
-				return true;
-			}
-			else if(other === null) {
-				return false;
-			}
-			else {
-				const treeWalker = this[symbols.nodeDocument].createTreeWalker(this);
-				let currentNode = treeWalker.firstChild();
-
-				while(currentNode !== null) {
-					if(currentNode === other) {
-						return true;
-					}
-					currentNode = treeWalker.nextNode();
-				}
-
-				return false;
-			}
+			return other === null ? false : isInclusiveDescendant(other, this);
 		};
 	}
-	set contains(value) {}
+	set contains(value) {
+		return errors.readOnly('contains', value);
+	}
+
+	get firstChild() {
+		return this[symbols.firstChild];
+	}
+	set firstChild(value) {
+		return errors.readOnly('firstChild', value);
+	}
 
 	get getRootNode() {
-		let rootNode = this;
-
-		while(rootNode[symbols.parent]) {
-			rootNode = rootNode[symbols.parent];
-		}
-
-		return rootNode;
+		return function(options = {}) {
+			return getRoot(this);
+		};
 	}
-	set getRootNode(value) {}
+	set getRootNode(value) {
+		return errors.readOnly('getRootNode', value);
+	}
 
 	get hasChildNodes() {
-		return this.firstChild ? true : false;
+		return function() {
+			return this[symbols.firstChild] === null ? false : true;
+		};
 	}
-	set hasChildNodes(value) {}
+	set hasChildNodes(value) {
+		return errors.readOnly('hasChildNodes', value);
+	}
 
 	get insertBefore() {
 		return function(node, child) {
 			return preInsert(node, this, child);
 		};
 	}
-	set insertBefore(value) {}
+	set insertBefore(value) {
+		return errors.readOnly('insertBefore', value);
+	}
+
+	get isConnected() {
+		return getRoot(this)[symbols.interfaces].has('Document');
+	}
+	set isConnected(value) {
+		return errors.readOnly('isConnected', value);
+	}
+
+	get isDefaultNamespace() {
+		return function(namespace) {
+			if(namespace === '') {
+				namespace = null;
+			}
+
+			let defaultNamespace = locateNamespace(this, null);
+
+			return defaultNamespace === namespace;
+		};
+	}
+	set isDefaultNamespace(value) {
+		return errors.readOnly('isDefaultNamespace', value);
+	}
 
 	get isEqualNode() {
 		return function(otherNode) {
-			function compareNodes(nodeA, nodeB) {
-				const interfaces = nodeA.constructor[symbols.interfaces];
-
-				function compareProperties(properties) {
-					for(const property of properties) {
-						if(nodeA[property] !== nodeB[property]) {
-							return false;
-						}
-					}
-				}
-
-				for(const currentInterface of interfaces) {
-					if(!nodeB.constructor[symbols.interfaces].has(currentInterface)) {
-						return false;
-					}
-				}
-
-				if(interfaces.has('DocumentType') && compareProperties([
-					'name',
-					'publicId',
-					'systemId'
-				]) === false) {
-					return false;
-				}
-				else if(interfaces.has('Element')) {
-					if(compareProperties([
-					symbols.namespace,
-					symbols.namespacePrefix,
-					'localName',
-					[symbols.attributes].size
-					]) === false) {
-						return false;
-					}
-
-					for(const [attributeName, attributeNode] of nodeA[symbols.attributes]) {
-						if(!attributeNode.isEqualNode(nodeB[symbols.attributes][attributeName])) {
-							return false;
-						}
-					}
-				}
-				else if(interfaces.has('Attr') && compareProperties([
-					symbols.namespace,
-					'localName',
-					'value'
-				]) === false) {
-					return false;
-				}
-				else if(interfaces.has('ProcessingInstruction') && compareProperties([
-					'target',
-					'data'
-				]) === false) {
-					return false;
-				}
-				else if((interfaces.has('Text') || interfaces.has('Comment')) && compareProperties([
-					'data'
-				]) === false) {
-					return false;
-				}
-			}
-
-			if(compareNodes(this, otherNode) === false) {
-				return false;
-			}
-
-			const treeWalkerA = this[symbols.nodeDocument].createTreeWalker(this);
-			const treeWalkerB = this[symbols.nodeDocument].createTreeWalker(this);
-			let currentNodeA = treeWalkerA.firstChild();
-			let currentNodeB = treeWalkerB.firstChild();
-
-			while(currentNodeA !== null && currentNodeB !== null) {
-				if(compareNodes(currentNodeA, currentNodeB) === false) {
-					return false;
-				}
-				else {
-					currentNodeA = treeWalkerA.nextNode();
-					currentNodeB = treeWalkerB.nextNode();
-				}
-			}
-
-			if(currentNodeA !== null || currentNodeB !== null) {
+			if(otherNode === null) {
 				return false;
 			}
 			else {
-				return true;
+				return getEquality(this, otherNode);
 			}
-		}
+		};
 	}
-	set isEqualNode(value) {}
+	set isEqualNode(value) {
+		return errors.readOnly('isEqualNode', value);
+	}
 
 	get isSameNode() {
 		return function(otherNode) {
 			return this === otherNode;
-		}
+		};
 	}
-	set isSameNode(value) {}
+	set isSameNode(value) {
+		return errors.readOnly('isSameNode', value);
+	}
 
-	get normalize() {
-		function exclusiveTextNodeFilter(node) {
-			if(node.constructor[symbols.interfaces].has('CDATASection')) {
-				return nodeFilter.FILTER_SKIP;
+	get lastChild() {
+		return this[symbols.lastChild];
+	}
+	set lastChild(value) {
+		return errors.readOnly('lastChild', value);
+	}
+
+	get lookupPrefix() {
+		return function(namespace) {
+			if(namespace === null || namespace === '') {
+				return null;
+			}
+
+			const interfaces = this[symbols.interfaces];
+
+			if(interfaces.has('Element')) {
+				return locateNamespacePrefix(this, namespace);
+			}
+			else if(interfaces.has('Document')) {
+				const documentElement = getDocumentElement(this);
+
+				if(documentElement !== null) {
+					return locateNamespacePrefix(documentElement, namespace);
+				}
+				else {
+					return null;
+				}
+			}
+			else if(interfaces.has('DocumentType') || interfaces.has('DocumentFragment')) {
+				return null;
+			}
+			else if(interfaces.has('Attr')) {
+				if(this[symbols.element] !== null) {
+					return locateNamespacePrefix(this[symbols.element], namespace);
+				}
+				else {
+					return null;
+				}
 			}
 			else {
-				return nodeFilter.FILTER_ACCEPT;
+				const parentElement = getParentElement(this);
+
+				if(parentElement !== null) {
+					return locateNamespacePrefix(parentElement, namespace);
+				}
+				else {
+					return null;
+				}
 			}
+		};
+	}
+	set lookupPrefix(value) {
+		return errors.readOnly('lookupPrefix', value);
+	}
+
+	get lookupNamespaceURI() {
+		return function(prefix) {
+			if(prefix === '') {
+				prefix = null;
+			}
+
+			return locateNamespace(this, prefix);
+		};
+	}
+	set lookupNamespaceURI(value) {
+		return errors.readOnly('lookupNamespaceURI', value);
+	}
+
+	get nextSibling() {
+		return this[symbols.nextSibling];
+	}
+	set nextSibling(value) {
+		return errors.readOnly('nextSibling', value);
+	}
+
+	get nodeName() {
+		const interfaces = this[symbols.interfaces];
+
+		if(interfaces.has('Element')) {
+			return getHTMLUppercasedQualifiedName(this);
 		}
-
-		const treeWalker = this[symbols.nodeDocument].createTreeWalker(this, nodeFilter.SHOW_TEXT, {acceptNode: exclusiveTextNodeFilter});
-		let node = treeWalker.nextNode();
-
-		while(node !== null) {
-			let length = node.data.length;
-
-			if(length === 0) {
-				remove(node);
-				node = treeWalker.nextNode();
-				continue;
-			}
-
-			const textWalker = this[symbols.nodeDocument].createTreeWalker(node, nodeFilter.SHOW_TEXT, {acceptNode: exclusiveTextNodeFilter});
-			let currentTextNode = textWalker.nextSibling();
-			let data = '';
-
-			while(currentTextNode !== null) {
-				data += currentTextNode.data;
-				remove(currentTextNode);
-				currentTextNode = textWalker.nextSibling();
-			}
-
-			node.replaceData(length, 0, data);
-			node = treeWalker.nextNode();
+		else if(interfaces.has('Attr')) {
+			return getQualifiedName(this);
+		}
+		else if(interfaces.has('Text') && !interfaces.has('CDATASection')) {
+			return '#text';
+		}
+		else if(interfaces.has('CDATASection')) {
+			return '#cdata-section';
+		}
+		else if(interfaces.has('ProcessingInstruction')) {
+			return this[symbols.target];
+		}
+		else if(interfaces.has('Comment')) {
+			return '#comment';
+		}
+		else if(interfaces.has('Document')) {
+			return '#document';
+		}
+		else if(interfaces.has('DocumentType')) {
+			return this[symbols.name];
+		}
+		else if(interfaces.has('DocumentFragment')) {
+			return '#document-fragment';
 		}
 	}
-	set normalize(value) {}
+	set nodeName(value) {
+		return errors.readOnly('nodeName', value);
+	}
+
+	get nodeType() {
+		const interfaces = this[symbols.interfaces];
+
+		if(interfaces.has('Element')) {
+			return this.constructor.ELEMENT_NODE;
+		}
+		else if(interfaces.has('Attr')) {
+			return this.constructor.ATTRIBUTE_NODE;
+		}
+		else if(interfaces.has('Text') && !interfaces.has('CDATASection')) {
+			return this.constructor.TEXT_NODE;
+		}
+		else if(interfaces.has('CDATASection')) {
+			return this.constructor.CDATASection;
+		}
+		else if(interfaces.has('ProcessingInstruction')) {
+			return this.constructor.PROCESSING_INSTRUCTION_NODE;
+		}
+		else if(interfaces.has('Comment')) {
+			return this.constructor.COMMENT_NODE;
+		}
+		else if(interfaces.has('Document')) {
+			return this.constructor.DOCUMENT_NODE;
+		}
+		else if(interfaces.has('DocumentType')) {
+			return this.constructor.DOCUMENT_TYPE_NODE;
+		}
+		else if(interfaces.has('DocumentFragment')) {
+			return this.constructor.DOCUMENT_FRAGMENT_NODE;
+		}
+	}
+	set nodeType(value) {
+		return errors.readOnly('nodeType', value);
+	}
+
+	get nodeValue() {
+		const interfaces = this[symbols.interfaces];
+
+		if(interfaces.has('Attr')) {
+			return this[symbols.value];
+		}
+		else if(interfaces.has('CharacterData')) {
+			return this[symbols.data];
+		}
+		else {
+			return null;
+		}
+	}
+	set nodeValue(value) {
+		const interfaces = this[symbols.interfaces];
+
+		if(value === null) {
+			value = '';
+		}
+
+		if(interfaces.has('Attr')) {
+			return setAnExistingAttributeValue(this, value);
+		}
+		else if(interfaces.has('CharacterData')) {
+			return replaceData(this, 0, getLength(this), value);
+		}
+	}
+
+	get normalize() {
+		return function() {
+			let lastTextNode = null;
+
+			for(const node of walkDescendants(this)) {
+				if(!node[symbols.interfaces].has('Text') || node[symbols.interfaces].has('CDATASection')) {
+					continue;
+				}
+
+				if(lastTextNode !== null) {
+					remove(lastTextNode);
+					lastTextNode = null;
+				}
+
+				let length = getLength(node);
+
+				if(length === 0) {
+					lastTextNode = node;
+					continue;
+				}
+
+				let data;
+				let lastTextSibling = null;
+
+				for(const textNode of walkContiguousExclusiveTextNodes(node)) {
+					if(lastTextSibling !== null) {
+						remove(lastTextSibling);
+						lastTextSibling = null;
+					}
+
+					data += textNode[symbols.data];
+					lastTextSibling = textNode;
+				}
+
+				if(lastTextSibling !== null) {
+					remove(lastTextSibling);
+				}
+
+				replaceData(node, length, 0, data);
+			}
+
+			if(lastTextNode !== null) {
+				remove(lastTextNode);
+			}
+		};
+	}
+	set normalize(value) {
+		return errors.readOnly('normalize', value);
+	}
+
+	get ownerDocument() {
+		if(this[symbols.interfaces].has('Document')) {
+			return null;
+		}
+		else {
+			return this[symbols.nodeDocument];
+		}
+	}
+	set ownerDocument(value) {
+		return errors.readOnly('ownerDocument', value);
+	}
+
+	get parentElement() {
+		return getParentElement(this);
+	}
+	set parentElement(value) {
+		return errors.readOnly('parentElement', value);
+	}
+
+	get parentNode() {
+		return this[symbols.parent];
+	}
+	set parentNode(value) {
+		return errors.readOnly('parentNode', value);
+	}
+
+	get previousSibling() {
+		return this[symbols.previousSibling];
+	}
+	set previousSibling(value) {
+		return errors.readOnly('previousSibling', value);
+	}
 
 	get removeChild() {
 		return function(child) {
 			return preRemove(child, this);
 		};
 	}
-	set removeChild(value) {}
+	set removeChild(value) {
+		return errors.readOnly('removeChild', value);
+	}
 
 	get replaceChild() {
 		return function(node, child) {
 			return replace(child, node, this);
 		};
 	}
-	set replaceChild(value) {}
+	set replaceChild(value) {
+		return errors.readOnly('replaceChild', value);
+	}
+
+	get textContent() {
+		const interfaces = this[symbols.interfaces];
+
+		if(interfaces.has('DocumentFragment') || interfaces.has('Element')) {
+			return getDescendantTextContent(this);
+		}
+		else if(interfaces.has('Attr')) {
+			return this[symbols.value];
+		}
+		else if(interfaces.has('CharacterData')) {
+			return this[symbols.data];
+		}
+		else {
+			return null;
+		}
+	}
+	set textContent(value) {
+		const interfaces = this[symbols.interfaces];
+
+		if(value === null) {
+			value = '';
+		}
+
+		if(interfaces.has('DocumentFragment') || interfaces.has('Element')) {
+			return stringReplaceAll(value, this);
+		}
+		else if(interfaces.has('Attr')) {
+			return setAnExistingAttributeValue(this, value);
+		}
+		else if(interfaces.has('CharacterData')) {
+			return replaceData(this, 0, getLength(this), value);
+		}
+	}
 }
