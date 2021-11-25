@@ -1,4 +1,5 @@
 export default {
+	name,
 	qName
 }
 
@@ -18,4 +19,5 @@ const UnprefixedName = String.raw`(?:${LocalPart})`;
 const PrefixedName = String.raw`(?:${Prefix}:${LocalPart})`;
 const QName = String.raw`(?:${PrefixedName}|${UnprefixedName})`;
 
+export var name = new RegExp(String.raw`^${Name}$`, 'u');
 export var qName = new RegExp(String.raw`^${QName}$`, 'u');
