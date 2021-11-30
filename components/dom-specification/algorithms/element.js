@@ -1,9 +1,11 @@
+import { validateAndExtract } from './namespace.js';
+
 import symbols from '../../symbols.js';
 
 
 export default {
 	createAnElement, // TODO
-	createAnElementNS, // TODO
+	createAnElementNS,
 	getHTMLUppercasedQualifiedName,
 	getQualifiedName,
 	locateNamespacePrefix
@@ -16,8 +18,15 @@ export function createAnElement() {
 }
 
 // https://dom.spec.whatwg.org/#internal-createelementns-steps
-export function createAnElementNS() {
-	// TODO
+export function createAnElementNS(document, namespaceInput, qualifiedName, options) {
+	let [namespace, prefix, localName] = validateAndExtract(namespaceInput, qualifiedName);
+	let is = null;
+
+	if(typeof options === 'object' && 'is' in options) {
+		is = options.is;
+	}
+
+	return createAnElement(document, localName, namespace, prefix, is, true);
 }
 
 // https://dom.spec.whatwg.org/#element-html-uppercased-qualified-name
