@@ -1,5 +1,8 @@
 # Linked Abstract Syntax Tree
+# Markup Manipulator
+Manipulates HTML strings using standard DOM methods.
 Creates and reads HTML abstract syntax trees.
+Modify HTML and XML strings using standard DOM methods.
 
 
 - [Installation](#installation)
@@ -18,73 +21,71 @@ npm install linked-abstract-syntax-tree
 ## Usage
 
 ```js
-import { default as htmlparser2 } from "htmlparser2";
+import LAST from 'linked-abstract-syntax-tree';
 
-const parser = new htmlparser2.Parser (
-	{
-		onopentag(name, attributes) {
-			console.log('open tag', {name},{attributes});
-		},
-		// onopentagname(name) {
-		// 	console.log('open tag name', {name});
-		// },
-		// onattribute(name, value, quote) {
-		// 	console.log('attribute', {name}, {value}, {quote});
-		// },
-		ontext(text) {
-			console.log('text', {text});
-		},
-		onclosetag(name) {
-			console.log('close tag', {name});
-		},
-		onprocessinginstruction(name, data) {
-			console.log('processing instruction', {name}, {data});
-		},
-		oncomment(data) {
-			console.log('comment', {data});
-		},
-		// oncommentend() {
-		// 	console.log('comment end');
-		// },
-		// oncdatastart() {
-		// 	console.log('c data start');
-		// },
-		// oncdataend() {
-		// 	console.log('c data end');
-		// },
-		onerror(error) {
-			console.log({error});
-		},
-		// onreset() {
-		// 	console.log('reset');
-		// },
-		// onend() {
-		// 	console.log('end');
-		// }
-	},
-	{
-		decodeEntities: false,
-		lowerCaseAttributeNames: false,
-		lowerCaseTags: false
-	}
-);
+const document = LAST.parse('<p>foo</p>');
+const paragraph = document.createElement('p');
+paragraph.textContent = 'bar';
+document.append(paragraph);
 
-parser.write(`<!DOCTYPE html><pre onclick='console.log();'><coDe cLass="html CSS" id='spaces start' data-spaces=\`end\`>&lt;p>Testing&lt;/p></codE></pre><img src="foo" alt='test'><script>var test = 'this is a test'; function foo(bar) {let baz = bar;return '<p>baz</p>';}foo(test);</script><custom-element><strong>inside</strong> a custom element</custom-element><script>var test = '</script>';</script><!-- end of <p>test</p> string -->`);
-parser.end();
+console.log(LAST.stringify(document)); // '<p>foo</p><p>bar</p>'
 ```
 
 
 ## Configuration
-```js
-import { default as htmlparser2 } from "htmlparser2";
-```
 
+### contentType
+- Default: 'text/html'
+- Accepts: content type
+
+How to render the document.
 
 ### decodeEntities
-- Default: false
+- Default: true
 - Accepts: Boolean
 
 Special HTML characters will be replaced.
+
+### errorHandling
+- Default: 'throw'
+- Accepts: 'throw', 'warn' or 'ignore'
+
+How to handle assigning to read-only properties or accessing unsupported properties.
+
+
+## Modifications
+Linked Abstract Syntax Tree makes the following modifications when parsing HTML:
+- Whitespace inside of tags is removed e.g. '<p     class="foo"</p>' becomes '<p class="foo"</p>'
+- Closing tags will always match the opening tag e.g. '<Div>foo</dIV>' becomes '<Div>foo</Div>'
+- Duplicate attribute names will be removed and their values discarded e.g. <p class="foo" class="bar"></p> becomes <p class="foo"></p>
+- There can be multiple elements as a child of a document. The document's documentElement will be the first child element
+- <html>, <head> and <body> elements will not be added if missing
+- Documents will always be in no-quirks mode
+
+
+## Scope
+The following are partially supported:
+- Custom elements don't support custom element reactions/lifecycle callbacks
+- Custom elements will always be upgraded
+- HTML collections will be replaced by a static array
+- Named node maps will be replaced by a static array
+- Node lists will be replaced by a static array
+
+The following are unsupported:
+- Events
+- Node iterators
+- Observers
+- Ranges
+- Shadow DOM
+
+
+## Alternatives
+- domhandler
+- cheerio
+- linkedom
+- node-html-parser
+- JSDOM
+- PostHTML
 
 
 ## Licence
