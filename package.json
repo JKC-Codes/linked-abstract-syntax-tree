@@ -38,10 +38,10 @@
 		"prepublishOnly": "npm run test"
 	},
 	"dependencies": {
-		"htmlparser2": "^7.1.0"
+		"htmlparser2": "^8.0.0"
 	},
 	"devDependencies": {
-		"ava": "^3.15.0"
+		"ava": "^4.0.0"
 	},
 	"engines": {
 		"node": ">=14.0.0"

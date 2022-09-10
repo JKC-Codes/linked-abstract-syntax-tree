@@ -1,4 +1,5 @@
-import htmlparser2 from 'htmlparser2';
+import * as htmlparser2 from 'htmlparser2';
+
 
 import Document from './dom-specification/nodes/document.js';
 import symbols from './symbols.js';
