@@ -31,7 +31,8 @@ export default class Document extends Node {
 			[symbols.DOMImplementation]: {writable: true, value: new DOMImplementation()},
 			[symbols.origin]: {writable: true, value: Symbol('null')},
 			[symbols.type]: {writable: true, value: 'xml'},
-			[symbols.URL]: {writable: true,	value: new URL('about:blank')}
+			[symbols.URL]: {writable: true,	value: new URL('about:blank')},
+			[symbols.window]: {writable: true, value: undefined}
 		});
 
 		this[symbols.nodeDocument] = this;

@@ -2,15 +2,28 @@ import * as htmlparser2 from 'htmlparser2';
 
 
 import Document from './dom-specification/nodes/document.js';
+import Window from './html-specification/window.js';
+
 import symbols from './symbols.js';
 
+
+import Element from './dom-specification/nodes/element.js'; //TEMP
+
+
+const window = new Window();
+const customElements = window[symbols.customElementRegistry];
+
+export {customElements, parse};
+
 export default function parse(HTMLString = '', options) {
-	console.log('parser called on ' + HTMLString);
 	if(typeof HTMLString !== 'string') {
 		throw new Error(`Linked Abstract Syntax Tree can only parse strings. Received ${typeof HTMLString}: ${JSON.stringify(HTMLString)}`);
 	}
 
 	const document = new Document();
+	document[symbols.window] = window;
+	document[symbols.DOMImplementation][symbols.window] = window;
+	window[symbols.associatedDocument] = document;
 	let previousNode = document;
 	const parser = new htmlparser2.Parser({
 		onopentagname: handleOpenTagName,
@@ -34,16 +47,16 @@ export default function parse(HTMLString = '', options) {
 
 	function handleOpenTagName(name) {
 		console.log('open tag', {name});
-		// TODO handle foreign elements
-		const node = document.createElement(name);
-		node[symbols.LAST].originalTag = name;
+		const node = new Element();
+		node[symbols.localName] = name;
+		node[symbols.originalTag] = name;
 		previousNode.appendChild(node);
 		previousNode = node;
 	}
 
 	function handleAttribute(name, value, quotes) {
 		console.log('attribute', {name}, {value}, {quotes});
-		const attributesMap = previousNode[symbols.LAST].properties.attributes;
+		const attributesMap = previousNode[symbols.attributes];
 		const lowerCaseName = name.toLowerCase();
 
 		if(!attributesMap.has(lowerCaseName)) {
@@ -61,8 +74,8 @@ export default function parse(HTMLString = '', options) {
 
 	function handleCloseTag(name, isImplied) {
 		console.log('close tag', {name}, {isImplied});
-		previousNode[symbols.LAST].hasImpliedCloseTag = isImplied;
-		previousNode = previousNode.parentNode;
+		previousNode[symbols.hasImpliedCloseTag] = isImplied;
+		previousNode = previousNode[symbols.parent];
 	}
 
 	function handleProcessingInstruction(name, data) {

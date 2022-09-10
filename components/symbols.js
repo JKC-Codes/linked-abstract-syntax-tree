@@ -1,9 +1,11 @@
 export default {
+	associatedDocument: Symbol('associatedDocument'),
 	attributes: Symbol('attributes'),
 	clone: Symbol('clone'),
 	cloningSteps: Symbol('cloningSteps'),
 	contentType: Symbol('contentType'),
 	createElement: Symbol('createElement'),
+	customElementRegistry: Symbol('customElementRegistry'),
 	current: Symbol('current'),
 	data: Symbol('data'),
 	DOMImplementation: Symbol('DOMImplementation'),
@@ -37,5 +39,6 @@ export default {
 	type: Symbol('type'),
 	URL: Symbol('URL'),
 	value: Symbol('value'),
-	whatToShow: Symbol('whatToShow')
+	whatToShow: Symbol('whatToShow'),
+	window: Symbol('window')
 }

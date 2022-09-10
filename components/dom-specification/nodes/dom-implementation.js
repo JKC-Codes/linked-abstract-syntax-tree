@@ -16,6 +16,7 @@ export default class DOMImplementation {
 	constructor() {
 		Object.defineProperties(this, {
 			[symbols.nodeDocument]: {writable: true, value: undefined},
+			[symbols.window]: {writable: true, value: undefined}
 		});
 	}
 
@@ -23,6 +24,9 @@ export default class DOMImplementation {
 	get createDocument() {
 		return function(namespace, qualifiedName, doctype) {
 			const document = new Document();
+			document[symbols.window] = this[symbols.window];
+			document[symbols.DOMImplementation][symbols.window] = this[symbols.window];
+
 			let element = null;
 
 			if(qualifiedName !== '') {
@@ -37,7 +41,7 @@ export default class DOMImplementation {
 				append(element, document);
 			}
 
-			doc[symbols.origin] = this[symbols.nodeDocument][symbols.origin];
+			document[symbols.origin] = this[symbols.nodeDocument][symbols.origin];
 
 			let contentType;
 
@@ -63,6 +67,8 @@ export default class DOMImplementation {
 	get createHTMLDocument() {
 		return function(title) {
 			const doc = new Document();
+			doc[symbols.window] = this[symbols.window];
+			doc[symbols.DOMImplementation][symbols.window] = this[symbols.window];
 			doc[symbols.contentType] = 'text/html';
 			doc[symbols.type] = 'html';
 
