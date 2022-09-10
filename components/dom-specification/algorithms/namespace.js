@@ -1,4 +1,4 @@
-import { qName } from '../../regex.js';
+import regex from '../../regex.js';
 
 
 export default {
@@ -9,7 +9,7 @@ export default {
 
 // https://dom.spec.whatwg.org/#validate
 export function validate(qualifiedName) {
-	if(!qName.test(qualifiedName)) {
+	if(!regex.qName.test(qualifiedName)) {
 		throw new Error(`DOMException: InvalidCharacterError. QualifiedName '${qualifiedName}' is not formatted correctly.`);
 	}
 }
