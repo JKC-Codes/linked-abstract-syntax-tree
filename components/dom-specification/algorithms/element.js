@@ -1,10 +1,12 @@
+import { getElementClass } from '../../elements.js';
+import { lookUpACustomElementDefinition } from '../../html-specification/algorithms/element.js';
 import { validateAndExtract } from './namespace.js';
 
 import symbols from '../../symbols.js';
 
 
 export default {
-	createAnElement, // TODO
+	createAnElement,
 	createAnElementNS,
 	getHTMLUppercasedQualifiedName,
 	getQualifiedName,
@@ -13,8 +15,24 @@ export default {
 
 
 // https://dom.spec.whatwg.org/#concept-create-element
-export function createAnElement() {
-	// TODO
+export function createAnElement(document, localName, namespace, prefix = null, is = null, synchronousCustomElements = false) {
+	const definition = lookUpACustomElementDefinition(document, namespace, localName, is);
+	let result = null;
+
+	if(definition !== null) {
+		result = new definition();
+	}
+	else {
+		result = new getElementClass(localName, namespace);
+	}
+
+	result[symbols.namespace] = namespace;
+	result[symbols.namespacePrefix] = prefix;
+	result[symbols.nodeDocument] = document;
+	result[symbols.localName] = localName;
+	result[symbols.is] = is;
+
+	return result;
 }
 
 // https://dom.spec.whatwg.org/#internal-createelementns-steps

@@ -16,7 +16,11 @@ export default class Element extends Node {
 		Object.defineProperties(this, {
 			[symbols.attributes]: {writable: true,	value: new Map()},
 			[symbols.hasImpliedCloseTag]: {writable: true,	value: false},
-			// [symbols.localName]: {writable: true,	value: localName},
+
+			[symbols.namespace]: {writable: true,	value: undefined},
+			[symbols.namespacePrefix]: {writable: true,	value: undefined},
+			[symbols.localName]: {writable: true,	value: undefined},
+			[symbols.is]: {writable: true,	value: undefined},
 
 			[symbols.HTMLUppercasedQualifiedName]: {get: function() {
 				return 'TODO: https://dom.spec.whatwg.org/#element-html-uppercased-qualified-name'
