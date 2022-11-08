@@ -1,6 +1,6 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement
 
-import Element from '../dom-specification/nodes/interfaces/element.js';
+import Element from '../dom-specification/nodes/element.js';
 
 import symbols from '../symbols.js';
 
