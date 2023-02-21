@@ -1,3 +1,5 @@
+I've hit a circular dependency with node requiring text which requires node so this project is dead for now
+
 # Linked Abstract Syntax Tree
 # Markup Manipulator
 Manipulates HTML strings using standard DOM methods.
